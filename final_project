@@ -1,0 +1,525 @@
+//员工通讯录及工资管理系统
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+//用const修饰便于根据实际情况调整
+const int MAX = 1000;
+const double TAX1 = 800;
+const double TAX2 = 1400;
+const double percent_TAX1 = 0.05;
+const double percent_TAX2 = 0.1;
+
+enum class Gender { Male, Female };
+
+//工资管理系统中员工人数
+int N = 0;
+
+Gender to_gender(const string& s)
+{
+	if (s == "m")
+	{
+		return Gender::Male;
+	}
+	else if (s == "f")
+	{
+		return Gender::Female;
+	}
+	throw runtime_error("invalid gender string");
+}
+
+string from_gender(const Gender& gen) 
+{
+	if (gen == Gender::Male)
+	{
+		return "m";
+	}
+	else
+	{
+		return "f";
+	}
+	throw runtime_error("invalid gender enum");
+}
+
+struct Entry
+{
+	string name, phone, address;
+	Gender gender;
+	size_t age;
+	/* e.g. zhangsan male 18 13166668888 shanghai */
+	friend istream& operator>>(istream& is, Entry& ent)
+	{
+		string gen_str;
+		is >> ent.name >> gen_str >> ent.age >> ent.phone >> ent.address;
+		ent.gender = to_gender(gen_str);
+		return is;
+	}
+	friend ostream& operator<<(ostream& os, const Entry& ent) 
+	{
+		string gen_str;
+		os << ent.name << ' ' << from_gender(ent.gender) << ' ' << ent.age
+			<< ' ' << ent.phone << ' ' << ent.address;
+		return os;
+	}
+};
+
+struct Contacts
+{
+private:
+	vector<Entry> entries;
+
+public:
+	void insert(const Entry& ent) { entries.push_back(ent); };
+	optional<Entry> remove(const string& name) 
+	{
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it != entries.end())
+		{
+			auto res = *it;
+			entries.erase(it);
+			return { res };
+		}
+		else 
+		{
+			return nullopt;
+		}
+	}
+
+	Entry* search(const string& name) {
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it == entries.end()) {
+			return nullptr;
+		}
+		return &*it;
+	}
+
+	void traverse(function<void(Entry)> f) 
+	{
+		for_each(entries.begin(), entries.end(), f);
+	}
+
+	void clear() { entries.clear(); }
+};
+
+//员工工资结构体
+struct personsalary
+{
+	char name[MAX];
+	double jbgz;    // 基本工资
+	double jj;		// 奖金
+	double kk;		// 扣款
+	double yfgz;	// 应发工资=基本工资+奖金-扣款
+	double sk;		// 税款(根据应发工资进行阶梯缴税)
+	double sfgz;	// 实发工资=应发工资-税款
+};
+
+//储存员工工资基本信息
+personsalary s[MAX];
+
+//函数声明
+void showmenu();
+void Append_pesonsalary();
+void Show_personsalary();
+void Caculate_salary(int n);
+int Query_salary();
+void Modify_salary();
+int Delete_Query_salary();
+void Delete_salary();
+void Sort_salary();
+
+//***计算员工工资(计算每个职工的应发工资、税款、实发工资)
+void Caculate_salary(int n)
+{
+	int i = 0;
+	// 计算每个职工的应发工资、税款、实发工资 
+	for (i = 0; i < n; i++)
+	{
+		// 计算应发工资 
+		s[i].yfgz = s[i].jbgz + s[i].jj - s[i].kk;
+
+		// 计算应扣的税款 
+		if (s[i].yfgz < TAX1)
+			s[i].sk = 0.0;
+		else if (s[i].yfgz < TAX2)
+			s[i].sk = percent_TAX1 * (s[i].yfgz - TAX1);
+		else
+			s[i].sk = percent_TAX2 * (s[i].yfgz - TAX2);
+
+		// 计算实发工资
+		s[i].sfgz = s[i].yfgz - s[i].sk;
+	}
+}
+//7.添加员工的工资信息
+void Append_pesonsalary()
+{
+	int n;
+	int i;
+	cout << "请输入需增加的职工数: ";
+	cin >> n;
+	cout << "温馨提示：下面请正确输入姓名，基本工资，奖金，扣款" << endl;
+	for (i = 0; i < n; i++)
+	{
+		cout << "输入职工工资的详细信息:" << endl;
+		cout << "姓名: " << endl;
+		cin >> s[i].name;
+		cout << "基本工资: " << endl;
+		cin >> s[i].jbgz;
+		cout << "奖金: " << endl;
+		cin >> s[i].jj;
+		cout << "扣款: " << endl;
+		cin >> s[i].kk;
+		N++;
+	}
+	Caculate_salary(n);
+	system("pause");
+	system("cls");
+}
+//8.显示员工的工资
+void Show_personsalary()
+{
+	int i;
+	for (i = 0; i < N; i++)
+	{
+		cout << "员工姓名:" << s[i].name << endl;
+		cout << "基本工资:" << s[i].jbgz << endl;
+		cout << "所得奖金:" << s[i].jj << endl;
+		cout << "员工扣款:" << s[i].kk << endl;
+		cout << "应发工资:" << s[i].yfgz << endl;
+		cout << "实发工资:" << s[i].sfgz << endl;
+		cout << "员工税款:" << s[i].sk << endl;
+	}
+	cout << "现有员工总数为：" << N << endl;
+	system("pause");
+	system("cls");
+}
+//***修改信息前，职工信息查询
+int Query_salary()
+{
+	int i = 0;
+	int j = -1;
+	char name[MAX];
+	// 先显示所有职工工资信息 
+	Show_personsalary();
+	cout << "请输入姓名: " << endl;
+	cin >> name;
+	for (i = 0; i < N; i++)
+	{
+		if (!strcmp(name, s[i].name))// 逐个比较姓名是否相同 
+		{
+			j = i;
+			break;
+		}
+	}
+	if (j < 0)
+	{
+		cout << "查无此人!" << endl;
+	}
+	else
+	{
+		// 在修改前，查看该职工的工资信息 
+		cout << "需要修改的该职工的工资信息如下:" << endl;
+		cout << "员工姓名" << s[i].name << endl;
+		cout << "基本工资" << s[i].jbgz << endl;
+		cout << "所得奖金" << s[i].jj << endl;
+		cout << "员工扣款" << s[i].kk << endl;
+		cout << "应发工资" << s[i].yfgz << endl;
+		cout << "实发工资" << s[i].sfgz << endl;
+		cout << "员工税款" << s[i].sk << endl;
+	}
+	return j;
+}
+//9.修改员工工资信息
+void Modify_salary()
+{
+	int j = -1;
+	int option = 0;
+	char c;
+	// 在修改之前，进行职工查询
+	j = Query_salary();
+	// 下面针对查找到的职工，对其工资信息进行修改 
+	if (j >= 0)
+	{
+		while (!option)
+		{
+			cout << "可修改该职工的如下项的信息:" << endl;
+			cout << "***1: 员工姓名***" << endl;
+			cout << "***2: 基本工资***" << endl;
+			cout << "***3: 员工奖金***" << endl;
+			cout << "***4: 员工扣款***" << endl;
+			while (!option)
+			{
+				cout << "请选择功能序号:" << endl;
+				cin >> option;
+				if (option == 1)	// 修改姓名 
+				{
+					cout << "姓名改为: ";
+					cin >> s[j].name;
+					cout << "员工姓名修改成功！" << endl;
+				}
+				else if (option == 2)	// 修改基本工资 
+				{
+					cout << "基本工资改为: ";
+					cin >> s[j].jbgz;
+					cout << "员工基本工资修改成功！" << endl;
+				}
+				else if (option == 3)	// 修改员工奖金
+				{
+					cout << "员工奖金改为: ";
+					cin >> s[j].jj;
+					cout << "员工奖金修改成功！" << endl;
+				}
+				else if (option == 4)	// 修改扣款
+				{
+					cout << "员工扣款改为: ";
+					cin >> s[j].kk;
+					cout << "员工扣款修改成功！" << endl;
+				}
+				else
+				{
+					cout << "您输入了错误的序号，请重新输入!" << endl;
+					option = 0;
+				}
+			}
+			// 是否继续修改该职工的工资信息
+			cout << "是否继续修改该职工的工资信息?" << endl;
+			cout << "请输入y/n(不区分大小写)" << endl;
+			cin >> c;
+			if (c == 'Y' || c == 'y')
+			{
+				option = 0;
+			}
+			else
+			{
+				system("pause");
+				system("cls");
+			}
+		}
+	}
+}
+//***删除信息前，职工信息查询
+int Delete_Query_salary()
+{
+	int i = 0;
+	int j = -1;
+	char name[MAX];
+	cout << "请输入姓名: " << endl;
+	cin >> name;
+	for (i = 0; i < N;i++)
+	{
+		if (!strcmp(name, s[i].name))// 逐个比较姓名是否相同 
+		{
+			j = i;
+			break;
+		}
+	}
+	if (j < 0)
+	{
+		cout << "查无此人!" << endl;
+	}
+	return j;
+}
+//10.删除员工工资信息
+void Delete_salary()
+{
+	int i;
+	int j = -1;
+	// 在删除前，进行职工查询。如查无此人，则不删除。
+	j = Delete_Query_salary();
+	if (j >= 0)
+	{
+		// 针对查找到的职工，进行删除
+		char c;
+		cout << "您确认要删除该职工的工资信息吗?(Y/N)" << endl;
+		cin >> c;
+		if (c == 'Y' || c == 'y')
+		{
+			N--;
+			for (i = j; i < N; i++)
+				s[i] = s[i + 1];
+		}
+	}
+	else
+		cout << "查无此人！" << endl;
+	system("pause");
+	system("cls");
+}
+//11.员工工资排序
+void Sort_salary()
+{
+	int i, j;
+	personsalary t;
+	for (i = 0; i < MAX - 1; i++)	// 冒泡降序排序 
+	{
+		for (j = 0; j < MAX - 1 - i; j++)
+		{
+			if (s[j].sfgz < s[j + 1].sfgz)
+			{
+				t = s[j];
+				s[j] = s[j + 1];
+				s[j + 1] = t;
+			}
+		}
+	}
+	Show_personsalary();
+}
+//1.显示菜单界面
+void showmenu()
+{
+	cout << "--通讯录管理系统--" << endl;
+	cout << "$$ 1.添加联系人 $$" << endl;
+	cout << "$$ 2.显示联系人 $$" << endl;
+	cout << "$$ 3.删除联系人 $$" << endl;
+	cout << "$$ 4.查找联系人 $$" << endl;
+	cout << "$$ 5.修改联系人 $$" << endl;
+	cout << "$$ 6.清空联系人 $$" << endl;
+	cout << "---工资管理系统---" << endl;
+	cout << "$ 7.添加工资信息 $" << endl;
+	cout << "$ 8.显示员工工资 $" << endl;
+	cout << "$ 9.修改员工工资 $" << endl;
+	cout << "$10.删除员工工资 $" << endl;
+	cout << "$11.员工工资排序 $" << endl;
+	cout << "*** 0.退出系统 ***" << endl;
+}
+int main()
+{
+	//创建通讯录结构体
+	Contacts cont;
+	//创建选择输入变量
+	int select = 0; 
+	while (true) {
+		showmenu();
+		cin >> select;
+		switch (select) 
+		{
+		case 1: 
+		{
+			cout << "请输入 姓名 性别(f/m) 年龄 电话 住址" << endl;
+			Entry ent;
+			try
+			{
+				cin >> ent;
+				cont.insert(ent);
+				cout << "输入成功！" << endl;
+			}
+			catch (exception e) 
+			{
+				cout << "输入有误" << endl;
+			}
+			break; 
+			//添加联系人
+		}
+		case 2:
+		{
+			cont.traverse([](auto e) { cout << e << endl; });
+			break; //显示联系人
+		}
+		case 3:
+		{
+			cout << "请输入您要删除的联系人：" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.remove(name);
+			if (ent.has_value()) 
+			{
+				cout << "删除成功" << endl;
+			}
+			else 
+			{
+				cout << "查无此人" << endl;
+			}
+			break; 
+			//删除联系人
+		}
+		case 4:
+		{
+			cout << "输入查找的联系人" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.search(name);
+			if (ent == nullptr) 
+			{
+				cout << "查无此人" << endl;
+			}
+			else 
+			{
+				cout << *ent << endl;
+			}
+			break; 
+			//查找联系人
+		}
+		case 5: 
+		{
+			cout << "请输入要修改的联系人" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.search(name);
+			if (ent != nullptr) {
+				cout << "请输入 姓名 性别(f/m) 年龄 电话 住址" << endl;
+				Entry tmp;
+				try {
+					cin >> tmp;
+					*ent = tmp;
+					cout << "输入成功！" << endl;
+				}
+				catch (exception e)
+				{
+					cout << "输入有误" << endl;
+				}
+			}
+			else
+			{
+				cout << "查无此人" << endl;
+			}
+			break; 
+			//修改联系人
+		}
+		case 6: 
+		{
+			cout << "通讯录已经清空" << endl;
+			cont.clear();
+			break; 
+			//清空联系人
+		}
+		case 7:
+			Append_pesonsalary();
+			break;
+			//员工工资信息添加
+		case 8:
+			Show_personsalary();
+			break;
+			//员工工资信息查询
+		case 9:
+			Modify_salary();
+			break;
+			//员工工资信息修改
+		case 10:
+			Delete_salary();
+			break;
+			//员工工资信息删除
+		case 11:
+			Sort_salary();
+			break;
+			//员工工资信息排序
+		case 0: //退出系统
+			cout << "欢迎下次使用" << endl;
+			system("pause");
+			return 0;
+			break;
+		default:
+			break;
+		}
+		system("pause");
+		system("cls");
+	}
+	return 0;
+}
