@@ -1,0 +1,37 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+Gender to_gender(const string& s)
+{
+	if (s == "m")
+	{
+		return Gender::Male;
+	}
+	else if (s == "f")
+	{
+		return Gender::Female;
+	}
+	throw runtime_error("invalid gender string");
+}
+
+string from_gender(const Gender& gen) 
+{
+	if (gen == Gender::Male)
+	{
+		return "m";
+	}
+	else
+	{
+		return "f";
+	}
+	throw runtime_error("invalid gender enum");
+}
