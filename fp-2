@@ -1,0 +1,97 @@
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+Gender to_gender(const string& s)
+{
+	if (s == "m")
+	{
+		return Gender::Male;
+	}
+	else if (s == "f")
+	{
+		return Gender::Female;
+	}
+	throw runtime_error("invalid gender string");
+}
+
+string from_gender(const Gender& gen) 
+{
+	if (gen == Gender::Male)
+	{
+		return "m";
+	}
+	else
+	{
+		return "f";
+	}
+	throw runtime_error("invalid gender enum");
+}
+
+struct Entry
+{
+	string name, phone, address;
+	Gender gender;
+	size_t age;
+	/* e.g. zhangsan male 18 13166668888 shanghai */
+	friend istream& operator>>(istream& is, Entry& ent)
+	{
+		string gen_str;
+		is >> ent.name >> gen_str >> ent.age >> ent.phone >> ent.address;
+		ent.gender = to_gender(gen_str);
+		return is;
+	}
+	friend ostream& operator<<(ostream& os, const Entry& ent) 
+	{
+		string gen_str;
+		os << ent.name << ' ' << from_gender(ent.gender) << ' ' << ent.age
+			<< ' ' << ent.phone << ' ' << ent.address;
+		return os;
+	}
+};
+
+struct Contacts
+{
+private:
+	vector<Entry> entries;
+
+public:
+	void insert(const Entry& ent) { entries.push_back(ent); };
+	optional<Entry> remove(const string& name) 
+	{
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it != entries.end())
+		{
+			auto res = *it;
+			entries.erase(it);
+			return { res };
+		}
+		else 
+		{
+			return nullopt;
+		}
+	}
+
+	Entry* search(const string& name) {
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it == entries.end()) {
+			return nullptr;
+		}
+		return &*it;
+	}
+
+	void traverse(function<void(Entry)> f) 
+	{
+		for_each(entries.begin(), entries.end(), f);
+	}
+
+	void clear() { entries.clear(); }
+};
