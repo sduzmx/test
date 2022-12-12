@@ -1,0 +1,213 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <algorithm>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+enum class Gender { Male, Female };
+
+Gender to_gender(const string& s)
+{
+	if (s == "m")
+	{
+		return Gender::Male;
+	}
+	else if (s == "f")
+	{
+		return Gender::Female;
+	}
+	throw runtime_error("invalid gender string");
+}
+
+string from_gender(const Gender& gen) 
+{
+	if (gen == Gender::Male)
+	{
+		return "m";
+	}
+	else
+	{
+		return "f";
+	}
+	throw runtime_error("invalid gender enum");
+}
+
+struct Entry
+{
+	string name, phone, address;
+	Gender gender;
+	size_t age;
+	/* e.g. zhangsan male 18 13166668888 shanghai */
+	friend istream& operator>>(istream& is, Entry& ent)
+	{
+		string gen_str;
+		is >> ent.name >> gen_str >> ent.age >> ent.phone >> ent.address;
+		ent.gender = to_gender(gen_str);
+		return is;
+	}
+	friend ostream& operator<<(ostream& os, const Entry& ent) 
+	{
+		string gen_str;
+		os << ent.name << ' ' << from_gender(ent.gender) << ' ' << ent.age
+			<< ' ' << ent.phone << ' ' << ent.address;
+		return os;
+	}
+};
+
+struct Contacts
+{
+private:
+	vector<Entry> entries;
+
+public:
+	void insert(const Entry& ent) { entries.push_back(ent); };
+	optional<Entry> remove(const string& name) 
+	{
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it != entries.end())
+		{
+			auto res = *it;
+			entries.erase(it);
+			return { res };
+		}
+		else 
+		{
+			return nullopt;
+		}
+	}
+
+	Entry* search(const string& name) {
+		auto it = find_if(entries.begin(), entries.end(),
+			[&name](auto e) { return e.name == name; });
+		if (it == entries.end()) {
+			return nullptr;
+		}
+		return &*it;
+	}
+
+	void traverse(function<void(Entry)> f) 
+	{
+		for_each(entries.begin(), entries.end(), f);
+	}
+
+	void clear() { entries.clear(); }
+};
+int main()
+{
+	//创建通讯录结构体
+	Contacts cont;
+	//创建选择输入变量
+	int select = 0; 
+	while (true) {
+		showmenu();
+		cin >> select;
+		switch (select) 
+		{
+		case 1: 
+		{
+			cout << "请输入 姓名 性别(f/m) 年龄 电话 住址" << endl;
+			Entry ent;
+			try
+			{
+				cin >> ent;
+				cont.insert(ent);
+				cout << "输入成功！" << endl;
+			}
+			catch (exception e) 
+			{
+				cout << "输入有误" << endl;
+			}
+			break; 
+			//添加联系人
+		}
+		case 2:
+		{
+			cont.traverse([](auto e) { cout << e << endl; });
+			break; //显示联系人
+		}
+		case 3:
+		{
+			cout << "请输入您要删除的联系人：" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.remove(name);
+			if (ent.has_value()) 
+			{
+				cout << "删除成功" << endl;
+			}
+			else 
+			{
+				cout << "查无此人" << endl;
+			}
+			break; 
+			//删除联系人
+		}
+		case 4:
+		{
+			cout << "输入查找的联系人" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.search(name);
+			if (ent == nullptr) 
+			{
+				cout << "查无此人" << endl;
+			}
+			else 
+			{
+				cout << *ent << endl;
+			}
+			break; 
+			//查找联系人
+		}
+		case 5: 
+		{
+			cout << "请输入要修改的联系人" << endl;
+			string name;
+			cin >> name;
+			auto ent = cont.search(name);
+			if (ent != nullptr) {
+				cout << "请输入 姓名 性别(f/m) 年龄 电话 住址" << endl;
+				Entry tmp;
+				try {
+					cin >> tmp;
+					*ent = tmp;
+					cout << "输入成功！" << endl;
+				}
+				catch (exception e) {
+					cout << "输入有误" << endl;
+				}
+			}
+			else
+			{
+				cout << "查无此人" << endl;
+			}
+			break; 
+			//修改联系人
+		}
+		case 6: 
+		{
+			cout << "通讯录已经清空" << endl;
+			cont.clear();
+			break; 
+			//清空联系人
+		}
+    case 0: //退出系统
+			cout << "欢迎下次使用" << endl;
+			system("pause");
+			return 0;
+			break;
+		default:
+			break;
+		}
+		system("pause");
+		system("cls");
+	}
+	return 0;
+}
